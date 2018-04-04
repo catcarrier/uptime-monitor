@@ -6,22 +6,43 @@
 
 // Dependencies
 var http = require('http');
+var https = require('https');
 var url = require('url');
 var StringDecoder = require('string_decoder').StringDecoder;
 var config = require('./config');
+var fs = require('fs');
 
-// Server response to all requests with a string
-var server = http.createServer(function (req, res) {
+// Instantiate the (http) server
+var httpServer = http.createServer(function (req, res) {
+    unifiedServer(req, res);
+});
 
+// Start the (http) server
+httpServer.listen(config.httpPort, function () {
+    console.log('http server is listening on port ' + config.httpPort);
+});
+
+// Instantiate the (https) server
+var httpsServerOptions = {
+    'key' : fs.readFileSync('./https/key.pem'),
+    'cert' : fs.readFileSync('./https/cert.pem')
+};
+var httpsServer = https.createServer(httpsServerOptions, function (req, res) {
+    unifiedServer(req, res);
+});
+
+// Start the (http) server
+httpsServer.listen(config.httpsPort, function () {
+    console.log('https server is listening on port ' + config.httpsPort);
+});
+
+// All the server logic for http and https
+var unifiedServer = function (req, res) {
     // parse the url - returns object
     var parsedUrl = url.parse(req.url, true);
 
-    // console.log(parsedUrl.pathname);
-
     // get the path
     var trimmedPath = parsedUrl.pathname.replace(/^\/+|\/+$/g, '');
-
-    // console.log(trimmedPath);
 
     // get the query string as an object
     var queryStringObject = parsedUrl.query;
@@ -63,10 +84,8 @@ var server = http.createServer(function (req, res) {
             // Convert payload to string
             var payloadString = JSON.stringify(payload);
 
-            // console.log(payloadString);
-
             // Return the response
-            res.setHeader('Content-Type','application/json');
+            res.setHeader('Content-Type', 'application/json');
             res.writeHead(statusCode);
             res.end(payloadString);
 
@@ -74,13 +93,8 @@ var server = http.createServer(function (req, res) {
             console.log('Returning this response:', statusCode, payloadString);
         });
     });
-});
+};
 
-
-// Start the server and listen
-server.listen(config.port, function () {
-    console.log('Server is listening on port ' + config.port + ' in ' + config.envName);
-});
 
 // Defined handlers
 var handlers = {};
