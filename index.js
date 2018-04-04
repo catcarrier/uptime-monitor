@@ -8,17 +8,20 @@
 var http = require('http');
 var url = require('url');
 var StringDecoder = require('string_decoder').StringDecoder;
+var config = require('./config');
 
 // Server response to all requests with a string
 var server = http.createServer(function (req, res) {
 
-    // parse the url
+    // parse the url - returns object
     var parsedUrl = url.parse(req.url, true);
+
+    // console.log(parsedUrl.pathname);
 
     // get the path
     var trimmedPath = parsedUrl.pathname.replace(/^\/+|\/+$/g, '');
 
-    //console.log(trimmedPath);
+    // console.log(trimmedPath);
 
     // get the query string as an object
     var queryStringObject = parsedUrl.query;
@@ -51,7 +54,7 @@ var server = http.createServer(function (req, res) {
         };
         chosenHandler(data, function (statusCode, payload) {
             // use the status code called back by the handler, or a default
-            statusCode = typeof (statusCode) == 'number' ? statuscode : 200;
+            statusCode = typeof (statusCode) == 'number' ? statusCode : 200;
 
             // use the payload called back by the handler, or an empty object
             // we only accept an object here
@@ -60,7 +63,10 @@ var server = http.createServer(function (req, res) {
             // Convert payload to string
             var payloadString = JSON.stringify(payload);
 
+            // console.log(payloadString);
+
             // Return the response
+            res.setHeader('Content-Type','application/json');
             res.writeHead(statusCode);
             res.end(payloadString);
 
@@ -71,9 +77,9 @@ var server = http.createServer(function (req, res) {
 });
 
 
-// Start the server and listen on port 3000
-server.listen(3000, function () {
-    console.log('Server is listening on port 3000 now.');
+// Start the server and listen
+server.listen(config.port, function () {
+    console.log('Server is listening on port ' + config.port + ' in ' + config.envName);
 });
 
 // Defined handlers
