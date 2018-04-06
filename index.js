@@ -26,8 +26,8 @@ httpServer.listen(config.httpPort, function () {
 
 // Instantiate the (https) server
 var httpsServerOptions = {
-    'key' : fs.readFileSync('./https/key.pem'),
-    'cert' : fs.readFileSync('./https/cert.pem')
+    'key': fs.readFileSync('./https/key.pem'),
+    'cert': fs.readFileSync('./https/cert.pem')
 };
 var httpsServer = https.createServer(httpsServerOptions, function (req, res) {
     unifiedServer(req, res);
@@ -48,6 +48,8 @@ var unifiedServer = function (req, res) {
 
     // get the query string as an object
     var queryStringObject = parsedUrl.query;
+
+    // console.log('queryStringObject: ', queryStringObject);
 
     // get the http method
     var method = req.method.toLowerCase();
@@ -100,5 +102,5 @@ var unifiedServer = function (req, res) {
 // Define a request router
 var router = {
     'ping': handlers.ping,
-    'users' : handlers.users
+    'users': handlers.users
 };
