@@ -52,7 +52,27 @@ app.client.request = function(headers, path, method, queryStringObject, payload,
     }
 
     // handle the response
-    
+    xhr.onreadystatechange = function(){
+        if(xhr.readyState == XMLHttpRequest.DONE) {
+            var statusCode = xhr.status;
+            var responseReturned = xhr.responseText;
+
+            // We do not necessarily care about the response. If the calling code
+            // wants the response, it will have provided a callback.
+            if(cb) { 
+                try {
+                    var parsedResponse = JSON.parse(responseReturned);
+                    cb(parsedResponse);
+                } catch(err) {
+                    cb(statusCode, false);
+                }
+             }
+        }
+    }
+
+    // send the payload as json
+    var payloadString = JSON.stringify(payload);
+    xhr.send(payloadString);
 
 }
 
