@@ -124,7 +124,8 @@ app.bindForms = function () {
             e.preventDefault();
             var formId = this.id;
             var path = this.action;
-            var method = this.method.toUpperCase();
+            //var method = this.method.toUpperCase(); // PUT not supported
+            var method = document.getElementsByName('_method')[0].value.toUpperCase();
 
             // Hide the error message (if it's currently shown due to a previous error)
             document.querySelector("#" + formId + " .formError").style.display = 'hidden';
@@ -141,6 +142,7 @@ app.bindForms = function () {
 
             // Call the API
             app.client.request(undefined, path, method, undefined, payload, function (statusCode, responsePayload) {
+
                 // Display an error on the form if needed
                 if (statusCode !== 200) {
 
@@ -200,9 +202,6 @@ app.formResponseProcessor = function (formId, requestPayload, responsePayload) {
         app.setSessionToken(responsePayload);
         window.location = '/checks/all';
     }
-
-
-
 
 };
 
@@ -293,6 +292,57 @@ app.tokenRenewalLoop = function () {
     }, 1000 * 60);
 };
 
+// Load data on the page
+app.loadDataOnPage = function () {
+    // Get the current page from the body class
+    var bodyClasses = document.querySelector("body").classList;
+    var primaryClass = typeof (bodyClasses[0]) == 'string' ? bodyClasses[0] : false;
+
+    // Logic for account settings page
+    if (primaryClass == 'accountEdit') {
+        app.loadAccountEditPage();
+    }
+};
+
+// Load the account edit page specifically
+app.loadAccountEditPage = function () {
+    // Get the phone number from the current token, or log the user out if none is there
+    var phone = typeof (app.config.sessionToken.phone) == 'string' ? app.config.sessionToken.phone : false;
+    if (phone) {
+        // Fetch the user data
+        var queryStringObject = {
+            'phone': phone
+        };
+
+        //console.log(document.querySelector("#accountEdit1").method);
+
+        app.client.request(undefined, 'api/users', 'GET', queryStringObject, undefined, function (statusCode, responsePayload) {
+            if (statusCode == 200) {
+                // Put the data into the forms as values where needed
+                document.querySelector("#accountEdit1 .firstNameInput").value = responsePayload.firstName;
+                document.querySelector("#accountEdit1 .lastNameInput").value = responsePayload.lastName;
+                document.querySelector("#accountEdit1 .displayPhoneInput").value = responsePayload.phone;
+
+                // Put the hidden phone field into both forms
+                var hiddenPhoneInputs = document.querySelectorAll("input.hiddenPhoneNumberInput");
+                for (var i = 0; i < hiddenPhoneInputs.length; i++) {
+                    hiddenPhoneInputs[i].value = responsePayload.phone;
+                }
+
+            } else {
+                // If the request comes back as something other than 200, log the user 
+                // out (on the assumption that the api is temporarily down or the users token is bad)
+                app.logUserOut();
+            }
+        });
+    } else {
+        app.logUserOut();
+    }
+
+};
+
+
+
 // Init (bootstrapping)
 app.init = function () {
 
@@ -307,6 +357,9 @@ app.init = function () {
 
     // Renew token
     app.tokenRenewalLoop();
+
+    // Load data on page
+    app.loadDataOnPage();
 
 };
 
