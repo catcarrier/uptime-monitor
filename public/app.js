@@ -120,12 +120,28 @@ app.bindForms = function () {
     if (document.querySelector("form")) {
         document.querySelector("form").addEventListener("submit", function (e) {
 
+            //console.log(this);
+
             // Stop it from submitting
             e.preventDefault();
+
+            // needed for the api call
             var formId = this.id;
             var path = this.action;
+
+            // 
+            // Doing a POST --> use the <form> method, from this.method.toUpperCase().
+            // Doing a PUT --> look for an element named _method, use its value.
+            // Browsers do not yet support a form method of PUT.
             //var method = this.method.toUpperCase(); // PUT not supported
-            var method = document.getElementsByName('_method')[0].value.toUpperCase();
+            //var method = document.getElementsByName('_method')[0].value.toUpperCase();
+            var method = '';
+            var altmethod = document.getElementsByName('_method');
+            if (altmethod.length > 0) {
+                method = altmethod[0].value.toUpperCase();
+            } else {
+                method = this.method.toUpperCase();
+            }
 
             // Hide the error message (if it's currently shown due to a previous error)
             document.querySelector("#" + formId + " .formError").style.display = 'hidden';
@@ -183,7 +199,7 @@ app.formResponseProcessor = function (formId, requestPayload, responsePayload) {
             if (newStatusCode !== 200) {
 
                 // Set the formError field with the error text
-                document.querySelector("#" + formId + " .formError").innerHTML = 'Sorry, an error has occured. Please try again.';
+                document.querySelector("#" + formId + " .formError").innerHTML = 'Sorry, an error has occurred. Please try again.';
 
                 // Show (unhide) the form error field on the form
                 document.querySelector("#" + formId + " .formError").style.display = 'block';
@@ -202,6 +218,13 @@ app.formResponseProcessor = function (formId, requestPayload, responsePayload) {
         app.setSessionToken(responsePayload);
         window.location = '/checks/all';
     }
+
+    // If forms saved successfully and they have success messages, show them
+    var formsWithSuccessMessages = ['accountEdit1', 'accountEdit2'];
+    if (formsWithSuccessMessages.indexOf(formId) > -1) {
+        document.querySelector("#" + formId + " .formSuccess").style.display = 'block';
+    }
+
 
 };
 
