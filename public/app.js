@@ -96,7 +96,10 @@ app.bindLogoutButton = function () {
 };
 
 // Log the user out then redirect them
-app.logUserOut = function () {
+app.logUserOut = function (redirectUser) {
+    // Set redirectUser to default to true
+    redirectUser = typeof (redirectUser) == 'boolean' ? redirectUser : true;
+
     // Get the current token id
     var tokenId = typeof (app.config.sessionToken.id) == 'string' ? app.config.sessionToken.id : false;
 
@@ -109,83 +112,88 @@ app.logUserOut = function () {
         app.setSessionToken(false);
 
         // Send the user to the logged out page
-        window.location = '/session/deleted';
+        if (redirectUser) {
+            window.location = '/session/deleted';
+        }
 
     });
 };
 
-
 // Bind the forms
 app.bindForms = function () {
     if (document.querySelector("form")) {
-        document.querySelector("form").addEventListener("submit", function (e) {
 
-            //console.log(this);
+        var allForms = document.querySelectorAll("form");
+        for (var i = 0; i < allForms.length; i++) {
+            allForms[i].addEventListener("submit", function (e) {
 
-            // Stop it from submitting
-            e.preventDefault();
+                // Stop it from submitting
+                e.preventDefault();
+                var formId = this.id;
+                var path = this.action;
+                var method = this.method.toUpperCase();
 
-            // needed for the api call
-            var formId = this.id;
-            var path = this.action;
+                // Hide the error message (if it's currently shown due to a previous error)
+                document.querySelector("#" + formId + " .formError").style.display = 'none';
 
-            // 
-            // Doing a POST --> use the <form> method, from this.method.toUpperCase().
-            // Doing a PUT --> look for an element named _method, use its value.
-            // Browsers do not yet support a form method of PUT.
-            //var method = this.method.toUpperCase(); // PUT not supported
-            //var method = document.getElementsByName('_method')[0].value.toUpperCase();
-            var method = '';
-            var altmethod = document.getElementsByName('_method');
-            if (altmethod.length > 0) {
-                method = altmethod[0].value.toUpperCase();
-            } else {
-                method = this.method.toUpperCase();
-            }
-
-            // Hide the error message (if it's currently shown due to a previous error)
-            document.querySelector("#" + formId + " .formError").style.display = 'hidden';
-
-            // Turn the inputs into a payload
-            var payload = {};
-            var elements = this.elements;
-            for (var i = 0; i < elements.length; i++) {
-                if (elements[i].type !== 'submit') {
-                    var valueOfElement = elements[i].type == 'checkbox' ? elements[i].checked : elements[i].value;
-                    payload[elements[i].name] = valueOfElement;
-                }
-            }
-
-            // Call the API
-            app.client.request(undefined, path, method, undefined, payload, function (statusCode, responsePayload) {
-
-                // Display an error on the form if needed
-                if (statusCode !== 200) {
-
-                    // Try to get the error from the api, or set a default error message
-                    var error = typeof (responsePayload.Error) == 'string' ? responsePayload.Error : 'An error has occured, please try again';
-
-                    // Set the formError field with the error text
-                    document.querySelector("#" + formId + " .formError").innerHTML = error;
-
-                    // Show (unhide) the form error field on the form
-                    document.querySelector("#" + formId + " .formError").style.display = 'block';
-
-                } else {
-                    // If successful, send to form response processor
-                    app.formResponseProcessor(formId, payload, responsePayload);
+                // Hide the success message (if it's currently shown due to a previous error)
+                if (document.querySelector("#" + formId + " .formSuccess")) {
+                    document.querySelector("#" + formId + " .formSuccess").style.display = 'none';
                 }
 
+
+                // Turn the inputs into a payload
+                var payload = {};
+                var elements = this.elements;
+                for (var i = 0; i < elements.length; i++) {
+                    if (elements[i].type !== 'submit') {
+                        var valueOfElement = elements[i].type == 'checkbox' ? elements[i].checked : elements[i].value;
+                        if (elements[i].name == '_method') {
+                            method = valueOfElement;
+                        } else {
+                            payload[elements[i].name] = valueOfElement;
+                        }
+
+                    }
+                }
+
+                // If the method is DELETE, the payload should be a queryStringObject instead
+                var queryStringObject = method == 'DELETE' ? payload : {};
+
+                // Call the API
+                app.client.request(undefined, path, method, queryStringObject, payload, function (statusCode, responsePayload) {
+                    // Display an error on the form if needed
+                    if (statusCode !== 200) {
+
+                        if (statusCode == 403) {
+                            // log the user out
+                            app.logUserOut();
+
+                        } else {
+
+                            // Try to get the error from the api, or set a default error message
+                            var error = typeof (responsePayload.Error) == 'string' ? responsePayload.Error : 'An error has occured, please try again';
+
+                            // Set the formError field with the error text
+                            document.querySelector("#" + formId + " .formError").innerHTML = error;
+
+                            // Show (unhide) the form error field on the form
+                            document.querySelector("#" + formId + " .formError").style.display = 'block';
+                        }
+                    } else {
+                        // If successful, send to form response processor
+                        app.formResponseProcessor(formId, payload, responsePayload);
+                    }
+
+                });
             });
-        });
+        }
     }
 };
 
 // Form response processor
 app.formResponseProcessor = function (formId, requestPayload, responsePayload) {
     var functionToCall = false;
-
-    // accountCreate
     // If account creation was successful, try to immediately log the user in
     if (formId == 'accountCreate') {
         // Take the phone and password, and use it to log the user in
@@ -199,7 +207,7 @@ app.formResponseProcessor = function (formId, requestPayload, responsePayload) {
             if (newStatusCode !== 200) {
 
                 // Set the formError field with the error text
-                document.querySelector("#" + formId + " .formError").innerHTML = 'Sorry, an error has occurred. Please try again.';
+                document.querySelector("#" + formId + " .formError").innerHTML = 'Sorry, an error has occured. Please try again.';
 
                 // Show (unhide) the form error field on the form
                 document.querySelector("#" + formId + " .formError").style.display = 'block';
@@ -211,8 +219,6 @@ app.formResponseProcessor = function (formId, requestPayload, responsePayload) {
             }
         });
     }
-
-    // sessionCreate
     // If login was successful, set the token in localstorage and redirect the user
     if (formId == 'sessionCreate') {
         app.setSessionToken(responsePayload);
@@ -225,6 +231,11 @@ app.formResponseProcessor = function (formId, requestPayload, responsePayload) {
         document.querySelector("#" + formId + " .formSuccess").style.display = 'block';
     }
 
+    // If the user just deleted their account, redirect them to the account-delete page
+    if (formId == 'accountEdit3') {
+        app.logUserOut(false);
+        window.location = '/account/deleted';
+    }
 
 };
 
@@ -304,17 +315,6 @@ app.renewToken = function (callback) {
     }
 };
 
-// Loop to renew token often
-app.tokenRenewalLoop = function () {
-    setInterval(function () {
-        app.renewToken(function (err) {
-            if (!err) {
-                console.log("Token renewed successfully @ " + Date.now());
-            }
-        });
-    }, 1000 * 60);
-};
-
 // Load data on the page
 app.loadDataOnPage = function () {
     // Get the current page from the body class
@@ -336,9 +336,6 @@ app.loadAccountEditPage = function () {
         var queryStringObject = {
             'phone': phone
         };
-
-        //console.log(document.querySelector("#accountEdit1").method);
-
         app.client.request(undefined, 'api/users', 'GET', queryStringObject, undefined, function (statusCode, responsePayload) {
             if (statusCode == 200) {
                 // Put the data into the forms as values where needed
@@ -353,8 +350,7 @@ app.loadAccountEditPage = function () {
                 }
 
             } else {
-                // If the request comes back as something other than 200, log the user 
-                // out (on the assumption that the api is temporarily down or the users token is bad)
+                // If the request comes back as something other than 200, log the user our (on the assumption that the api is temporarily down or the users token is bad)
                 app.logUserOut();
             }
         });
@@ -362,9 +358,20 @@ app.loadAccountEditPage = function () {
         app.logUserOut();
     }
 
+
+
 };
 
-
+// Loop to renew token often
+app.tokenRenewalLoop = function () {
+    setInterval(function () {
+        app.renewToken(function (err) {
+            if (!err) {
+                console.log("Token renewed successfully @ " + Date.now());
+            }
+        });
+    }, 1000 * 60);
+};
 
 // Init (bootstrapping)
 app.init = function () {
