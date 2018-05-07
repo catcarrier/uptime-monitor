@@ -2,38 +2,14 @@
  * Test runner
  */
 
-// dep
-var helpers = require('./../lib/helpers');
-var assert = require('assert');
-
 // app logic for test runner
 _app = {};
 
 // container for tests
-_app.tests = {
-    'unit': {}
-};
+_app.tests = {};
 
-// Assert that getANumber returns a number
-_app.tests.unit['helpers.getANumber should return a number'] = function (done) {
-    var val = helpers.getANumber();
-    assert.equal(typeof (val), 'number');
-    done();
-};
-
-// Assert that getANumber returns 1
-_app.tests.unit['helpers.getANumber should return 1'] = function (done) {
-    var val = helpers.getANumber();
-    assert.equal(val, 1);
-    done();
-};
-
-// Assert that getANumber returns 2
-_app.tests.unit['helpers.getANumber should return 2'] = function (done) {
-    var val = helpers.getANumber();
-    assert.equal(val, 2);
-    done();
-};
+// add the unit tests as a dependency
+_app.tests.unit = require('./unit');
 
 // Count all the tests
 _app.countTests = function () {
