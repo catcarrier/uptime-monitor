@@ -2,6 +2,11 @@
  * Test runner
  */
 
+// Override the node_env variable so we do not have to use it at
+// the command line to run tests. If it is set at the command line
+// it will be overridden with this value.
+process.env.NODE_ENV='testing';
+
 // app logic for test runner
 _app = {};
 
@@ -10,6 +15,7 @@ _app.tests = {};
 
 // add the unit tests as a dependency
 _app.tests.unit = require('./unit');
+_app.tests.api = require('./api');
 
 // Count all the tests
 _app.countTests = function () {
@@ -53,6 +59,7 @@ _app.produceTestReport = function (limit, successes, errors) {
 
     console.log("");
     console.log("------------------------------ END TEST REPORT ------------------------------");
+    process.exit(0); // the api tests start up the app; shut it down now
 }
 
 // Run all the tests, collecting the errors and successes

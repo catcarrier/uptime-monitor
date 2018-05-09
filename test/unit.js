@@ -53,4 +53,12 @@ unit['logs.truncate does not throw if logId does not exist, calls back an error 
     }, TypeError);
 }
 
+// exampleDebuggingProblem.init should not throw, but it does
+unit['exampleDebuggingProblem.init should not throw when called'] = function(done){
+    assert.doesNotThrow(function(){
+        exampleDebuggingProblem.init();
+        done();
+    }, TypeError);
+}
+
 module.exports = unit;
